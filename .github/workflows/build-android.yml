@@ -15,25 +15,30 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Extract Dayflow source ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 2 -type f -iname 'Dayflow-Android-Source.zip' | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: Dayflow source ZIP not found"
+            find . -maxdepth 2 -type f
+            exit 1
+          fi
+          mkdir -p /tmp/dayflow-source
+          unzip -o "$ZIP_FILE" -d /tmp/dayflow-source
+          SOURCE_DIR=$(find /tmp/dayflow-source -type f -path '*/src/main.tsx' -printf '%h\n' | sed 's#/src$##' | head -n 1)
+          if [ -z "$SOURCE_DIR" ]; then
+            echo "ERROR: ZIP does not contain src/main.tsx"
+            find /tmp/dayflow-source -maxdepth 4 -type f | head -n 100
+            exit 1
+          fi
+          cp -a "$SOURCE_DIR"/. .
+          test -f src/main.tsx
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-        
-      - name: Extract Dayflow source ZIP
-        run: |
-          mkdir -p /tmp/dayflow-source
-          unzip -o "Dayflow-Android-Source.zip" -d /tmp/dayflow-source
-          SOURCE_DIR=$(find /tmp/dayflow-source -name package.json -printf '%h\n' | head -n 1)
-          if [ -z "$SOURCE_DIR" ]; then
-            echo "Could not find package.json in the ZIP"
-            exit 1
-          fi
-          cp -a "$SOURCE_DIR"/. .
-          test -f src/main.tsx || {
-            echo "Missing src/main.tsx after extraction"
-            exit 1
-          }
+
       - name: Install dependencies
         run: npm install
 
