@@ -6,54 +6,33 @@ on:
   push:
     branches:
       - main
+      - master
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
-        uses: 
-        
-      - name: Extract Dayflow source ZIP
-        run: |
-          unzip -o "Dayflow-Android-Source.zip" -d .
-          echo "Checking extracted files:"
-          find . -path '*/src/main.tsx' -o -name package.json
-          if [ ! -f src/main.tsx ]; then
-            echo "Looking for nested source folder..."
-            MAIN_FILE=$(find . -path '*/src/main.tsx' -not -path './node_modules/*' | head -n 1)
-            if [ -z "$MAIN_FILE" ]; then
-              echo "ERROR: src/main.tsx not found in ZIP"
-              exit 1
-            fi
-            PROJECT_DIR="${MAIN_FILE%/src/main.tsx}"
-            cp -a "$PROJECT_DIR"/. .
-          fi
-          test -f src/main.tsx
-
-        run: |
-          ZIP_FILE=$(find . -maxdepth 2 -type f -iname 'Dayflow-Android-Source.zip' | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: Dayflow source ZIP not found"
-            find . -maxdepth 2 -type f
-            exit 1
-          fi
-          mkdir -p /tmp/dayflow-source
-          unzip -o "$ZIP_FILE" -d /tmp/dayflow-source
-          SOURCE_DIR=$(find /tmp/dayflow-source -type f -path '*/src/main.tsx' -printf '%h\n' | sed 's#/src$##' | head -n 1)
-          if [ -z "$SOURCE_DIR" ]; then
-            echo "ERROR: ZIP does not contain src/main.tsx"
-            find /tmp/dayflow-source -maxdepth 4 -type f | head -n 100
-            exit 1
-          fi
-          cp -a "$SOURCE_DIR"/. .
-          test -f src/main.tsx
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Install dependencies
         run: npm install
@@ -61,27 +40,35 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
+      - name: Install matching Capacitor Android package
+        run: |
+          CORE_VERSION=$(node -p "require('./node_modules/@capacitor/core/package.json').version")
+          CORE_MAJOR="${CORE_VERSION%%.*}"
+          npm install "@capacitor/android@$CORE_MAJOR"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Prepare Android project
+        run: |
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.js ]; then
+            echo "Capacitor configuration is missing."
+            exit 1
+          fi
 
-      - name: Sync Capacitor Android
-        run: npx cap sync android
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
+          npx cap sync android
 
       - name: Build debug APK
+        working-directory: android
         run: |
-          cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: dayflow-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Dayflow-Android-APK
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
