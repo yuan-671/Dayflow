@@ -13,9 +13,25 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
-
+        uses: 
+        
       - name: Extract Dayflow source ZIP
+        run: |
+          unzip -o "Dayflow-Android-Source.zip" -d .
+          echo "Checking extracted files:"
+          find . -path '*/src/main.tsx' -o -name package.json
+          if [ ! -f src/main.tsx ]; then
+            echo "Looking for nested source folder..."
+            MAIN_FILE=$(find . -path '*/src/main.tsx' -not -path './node_modules/*' | head -n 1)
+            if [ -z "$MAIN_FILE" ]; then
+              echo "ERROR: src/main.tsx not found in ZIP"
+              exit 1
+            fi
+            PROJECT_DIR="${MAIN_FILE%/src/main.tsx}"
+            cp -a "$PROJECT_DIR"/. .
+          fi
+          test -f src/main.tsx
+
         run: |
           ZIP_FILE=$(find . -maxdepth 2 -type f -iname 'Dayflow-Android-Source.zip' | head -n 1)
           if [ -z "$ZIP_FILE" ]; then
