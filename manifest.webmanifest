@@ -1,0 +1,25 @@
+{
+  "name": "Dayflow Routine Planner",
+  "short_name": "Dayflow",
+  "description": "Plan daily routines and track your progress.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#dff36b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/dayflow-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/dayflow.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

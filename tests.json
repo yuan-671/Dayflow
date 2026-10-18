@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Offline app shell is registered",
+    "sanity": true,
+    "viewport": "mobile",
+    "covers": [
+      "service worker registration",
+      "offline app shell"
+    ],
+    "description": "Verifies production startup registers the service worker for offline use.",
+    "steps": [
+      "Open the deployed app online",
+      "Wait for the page to load",
+      "Inspect browser application storage for the active service worker"
+    ],
+    "expected": "The service worker registers and caches the app shell for later offline visits."
+  },
+  {
+    "name": "Routines persist locally",
+    "viewport": "mobile",
+    "covers": [
+      "local storage persistence"
+    ],
+    "description": "Verifies routines remain on the device after a reload.",
+    "steps": [
+      "Add a scheduled routine",
+      "Refresh the app",
+      "Inspect the routine list"
+    ],
+    "expected": "The routine remains available from local storage."
+  },
+  {
+    "name": "Offline navigation fallback",
+    "viewport": "desktop",
+    "covers": [
+      "offline app shell fallback"
+    ],
+    "description": "Verifies the cached app shell can be used when navigation cannot reach the network.",
+    "steps": [
+      "Load the app online at least once",
+      "Go offline in browser developer tools",
+      "Reload the app"
+    ],
+    "expected": "The cached app shell opens without a network connection."
+  }
+]
