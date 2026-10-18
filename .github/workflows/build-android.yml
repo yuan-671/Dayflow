@@ -1,15 +1,16 @@
 
-name: Build Dayflow Android APK
+name: Build Dayflow APK
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
 
 permissions:
   contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -17,52 +18,59 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 20
-          
+          node-version: 22
+
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
-      - name: Set up Android SDK
+      - name: Install Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Check project files
+        run: |
+          test -f package.json || {
+            echo "ERROR: package.json is missing from the repository root."
+            exit 1
+          }
+          test -f capacitor.config.ts -o \
+               -f capacitor.config.json -o \
+               -f capacitor.config.js || {
+            echo "ERROR: Capacitor configuration is missing."
+            exit 1
+          }
+
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Build web app
         run: npm run build
 
-      - name: Install matching Capacitor Android package
+      - name: Check Capacitor Android dependency
         run: |
           CORE_VERSION=$(node -p "require('./node_modules/@capacitor/core/package.json').version")
           CORE_MAJOR="${CORE_VERSION%%.*}"
-          npm install "@capacitor/android@$CORE_MAJOR"
+          npm install --no-save --no-audit --no-fund "@capacitor/android@$CORE_MAJOR"
 
-      - name: Prepare Android project
+      - name: Create or sync Android project
         run: |
-          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.js ]; then
-            echo "Capacitor configuration is missing."
-            exit 1
-          fi
-
           if [ ! -d android ]; then
             npx cap add android
           fi
-
           npx cap sync android
 
-      - name: Build debug APK
+      - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -70,4 +78,4 @@ jobs:
           name: Dayflow-Android-APK
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-
+          retention-days: 7
