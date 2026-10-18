@@ -20,7 +20,20 @@ jobs:
         with:
           node-version: 22
         
-
+      - name: Extract Dayflow source ZIP
+        run: |
+          mkdir -p /tmp/dayflow-source
+          unzip -o "Dayflow-Android-Source.zip" -d /tmp/dayflow-source
+          SOURCE_DIR=$(find /tmp/dayflow-source -name package.json -printf '%h\n' | head -n 1)
+          if [ -z "$SOURCE_DIR" ]; then
+            echo "Could not find package.json in the ZIP"
+            exit 1
+          fi
+          cp -a "$SOURCE_DIR"/. .
+          test -f src/main.tsx || {
+            echo "Missing src/main.tsx after extraction"
+            exit 1
+          }
       - name: Install dependencies
         run: npm install
 
